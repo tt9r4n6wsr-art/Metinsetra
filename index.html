@@ -81,6 +81,74 @@ ul{
     padding-left:25px;
 }
 
+.voting-card{
+    background:#111;
+    padding:25px;
+    border:2px solid #d4a017;
+    border-radius:10px;
+    margin-bottom:20px;
+}
+
+.voting-card h3{
+    color:#d4a017;
+    margin-bottom:20px;
+    text-align:center;
+    font-size:24px;
+}
+
+.voting-container{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));
+    gap:15px;
+}
+
+.vote-button{
+    background:#222;
+    border:2px solid #d4a017;
+    color:#d4a017;
+    padding:20px;
+    border-radius:10px;
+    cursor:pointer;
+    font-size:16px;
+    font-weight:bold;
+    transition:all 0.3s;
+    text-align:center;
+}
+
+.vote-button:hover{
+    background:#d4a017;
+    color:#000;
+    transform:scale(1.05);
+}
+
+.vote-button.voted{
+    background:#d4a017;
+    color:#000;
+}
+
+.vote-button:disabled{
+    opacity:0.5;
+    cursor:not-allowed;
+}
+
+.vote-count{
+    margin-top:8px;
+    font-size:14px;
+    color:#999;
+}
+
+.winner-info{
+    margin-top:20px;
+    padding:15px;
+    background:#1a1a1a;
+    border:1px solid #d4a017;
+    border-radius:10px;
+    text-align:center;
+    color:#d4a017;
+    font-size:18px;
+    font-weight:bold;
+}
+
 footer{
     text-align:center;
     padding:25px;
@@ -133,6 +201,15 @@ fark edememek anlamında mizahi bir kavramdır.
 
 </div>
 
+<div class="voting-card">
+<h3>🗳️ Günün Setrasını Belirle!</h3>
+
+<div class="voting-container" id="votingContainer">
+</div>
+
+<div class="winner-info" id="winnerInfo"></div>
+</div>
+
 <div class="card">
 <h3>😂 Günün Setrası</h3>
 
@@ -147,6 +224,119 @@ fark edememek anlamında mizahi bir kavramdır.
 <footer>
 © 2026 MetinSetra.com
 </footer>
+
+<script>
+const candidates = [
+    { name: "Metin Sert", emoji: "💪" },
+    { name: "Çağnur Cesur", emoji: "🦁" },
+    { name: "Uğur Cesur", emoji: "🔥" },
+    { name: "Umut Halaç", emoji: "😎" },
+    { name: "Yaşar Emre", emoji: "⭐" }
+];
+
+const today = new Date().toDateString();
+
+function initializeVotes() {
+    const stored = localStorage.getItem('setraVotes');
+    const storedDate = localStorage.getItem('setraVotesDate');
+    
+    if (storedDate !== today) {
+        localStorage.setItem('setraVotes', JSON.stringify({}));
+        localStorage.setItem('setraVotesDate', today);
+    }
+}
+
+function getVotes() {
+    const votes = localStorage.getItem('setraVotes');
+    return votes ? JSON.parse(votes) : {};
+}
+
+function getTotalVotes() {
+    const votes = getVotes();
+    return Object.values(votes).reduce((a, b) => a + b, 0);
+}
+
+function getUserVote() {
+    return localStorage.getItem('setraUserVote');
+}
+
+function vote(candidateName) {
+    if (getUserVote() !== null) {
+        alert('Bugün zaten oy verdiniz! Yarın tekrar oy verebilirsiniz.');
+        return;
+    }
+    
+    const votes = getVotes();
+    votes[candidateName] = (votes[candidateName] || 0) + 1;
+    localStorage.setItem('setraVotes', JSON.stringify(votes));
+    localStorage.setItem('setraUserVote', candidateName);
+    
+    renderVotes();
+}
+
+function getWinner() {
+    const votes = getVotes();
+    if (Object.keys(votes).length === 0) return null;
+    
+    let maxVotes = 0;
+    let winners = [];
+    
+    for (let [name, count] of Object.entries(votes)) {
+        if (count > maxVotes) {
+            maxVotes = count;
+            winners = [name];
+        } else if (count === maxVotes) {
+            winners.push(name);
+        }
+    }
+    
+    return winners.length === 1 ? winners[0] : null;
+}
+
+function renderVotes() {
+    const container = document.getElementById('votingContainer');
+    const votes = getVotes();
+    const userVote = getUserVote();
+    const totalVotes = getTotalVotes();
+    
+    container.innerHTML = '';
+    
+    candidates.forEach(candidate => {
+        const count = votes[candidate.name] || 0;
+        const percentage = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+        const isVoted = userVote === candidate.name;
+        
+        const button = document.createElement('button');
+        button.className = `vote-button ${isVoted ? 'voted' : ''}`;
+        button.onclick = () => vote(candidate.name);
+        button.disabled = userVote !== null && !isVoted;
+        
+        button.innerHTML = `
+            <div>${candidate.emoji} ${candidate.name}</div>
+            <div class="vote-count">${count} oy (${percentage}%)</div>
+        `;
+        
+        container.appendChild(button);
+    });
+    
+    const winner = getWinner();
+    const winnerInfo = document.getElementById('winnerInfo');
+    
+    if (totalVotes > 0) {
+        if (winner) {
+            const winnerCandidate = candidates.find(c => c.name === winner);
+            winnerInfo.innerHTML = `👑 Bugünün Efsanevi Setrası: <strong>${winnerCandidate.emoji} ${winner}</strong>`;
+        } else {
+            winnerInfo.innerHTML = `🔄 Oylar eşit! Daha fazla oy verin...`;
+        }
+    } else {
+        winnerInfo.innerHTML = `Henüz oy verilmedi. İlk oyu siz verelim! 🗳️`;
+    }
+}
+
+initializeVotes();
+renderVotes();
+</script>
 
 </body>
 </html>
